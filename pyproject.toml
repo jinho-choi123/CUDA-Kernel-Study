@@ -1,0 +1,12 @@
+[project]
+name = "cuda-kernel-study"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "clang-format>=21.1.6",
+    "clang-tidy>=21.1.6",
+    "cmake>=4.2.0",
+    "pre-commit>=4.5.0",
+]
