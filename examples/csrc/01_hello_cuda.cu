@@ -1,3 +1,7 @@
+/**
+ * Example of Hello CUDA
+ */
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdio.h>
@@ -8,5 +12,9 @@ int main(void) {
   printf("Hello GPU from CPU!\n");
 
   helloCUDAKernel<<<1, 10>>>();
+
+  // Wait for GPU to finish before exiting
+  cudaDeviceSynchronize();
+
   return 0;
 }
