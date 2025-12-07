@@ -8,14 +8,15 @@
 #include "utils.cu"
 #include <stdio.h>
 
-#define NUM_ROW 2048
-#define NUM_COL 2048
+#define NUM_ROW 4096
+#define NUM_COL 4096
 
 // number of datas to print
 #define PRINT_NUM 32
 
-__global__ void matrixAddition(const float *A, const float *B, float *C,
-                               int numElem) {
+// Matrix Addition Kernel using 1D Grid-layout and 1D Block-layout
+__global__ void matrixAddition1(const float *A, const float *B, float *C,
+                                int numElem) {
   // Thread Layout
   // Block: (1024,) threads
   // Grid: (NUM_ROW * NUM_COL / 1024 + 1,) blocks
@@ -27,6 +28,40 @@ __global__ void matrixAddition(const float *A, const float *B, float *C,
   }
 
   C[gThreadIdx] = A[gThreadIdx] + B[gThreadIdx];
+}
+
+// Matrix Addition Kernel using 2D Grid-layout and 2D Block-layout
+__global__ void matrixAddition2(const float *A, const float *B, float *C,
+                                int numElem) {
+  // Thread Layout
+  // Block: (32, 32) threads
+  // Grid: (NUM_ROW / 32, NUM_COL / 32) blocks
+  int col = blockDim.x * blockIdx.x + threadIdx.x;
+  int row = blockDim.y * blockIdx.y + threadIdx.y;
+
+  if (col >= NUM_COL || row >= NUM_ROW) {
+    // index out of bound
+    return;
+  }
+
+  C[row * NUM_COL + col] = A[row * NUM_COL + col] + B[row * NUM_COL + col];
+}
+
+// Matrix Addition Kernel using 2D Grid-layout and 1D Block-layout
+__global__ void matrixAddition3(const float *A, const float *B, float *C,
+                                int numElem) {
+  // Thread Layout
+  // Block: (1024, 1) threads
+  // Grid: (NUM_ROW / 1024, NUM_COL) blocks
+  int col = blockDim.x * blockIdx.x + threadIdx.x;
+  int row = blockIdx.y;
+
+  if (col >= NUM_COL || row >= NUM_ROW) {
+    // index out of bound
+    return;
+  }
+
+  C[row * NUM_COL + col] = A[row * NUM_COL + col] + B[row * NUM_COL + col];
 }
 
 int main(void) {
@@ -63,13 +98,34 @@ int main(void) {
   CUDA_CHECK(cudaMemcpy(devB, b, memSize, cudaMemcpyHostToDevice));
 
   // Launch Kernel
-  int threadsPerBlock = 1024;
-  int blocksPerGrid = (NUM_ROW * NUM_COL / threadsPerBlock) + 1;
 
   // Launch Matrix Addition Kernel
-  matrixAddition<<<blocksPerGrid, threadsPerBlock>>>(devA, devB, devC,
-                                                     NUM_ROW * NUM_COL);
+  // You can choose any of the following kernels to run
 
+  // 1D Grid-layout and 1D Block-layout
+  // START: 1D Grid-layout and 1D Block-layout
+  // int threadsPerBlock = 1024;
+  // int blocksPerGrid =
+  //     ((NUM_ROW * NUM_COL + threadsPerBlock - 1) / threadsPerBlock) + 1;
+  // matrixAddition1<<<blocksPerGrid, threadsPerBlock>>>(devA, devB, devC,
+  //                                                     NUM_ROW * NUM_COL);
+  // END: 1D Grid-layout and 1D Block-layout
+
+  // 2D Grid-layout and 2D Block-layout
+  // START: 2D Grid-layout and 2D Block-layout
+  // dim3 threadsPerBlock(32, 32);
+  // dim3 blocksPerGrid((NUM_ROW + 31) / 32, (NUM_COL + 31) / 32);
+  // matrixAddition2<<<blocksPerGrid, threadsPerBlock>>>(devA, devB, devC,
+  //                                                     NUM_ROW * NUM_COL);
+  // END: 2D Grid-layout and 2D Block-layout
+
+  // 2D Grid-layout and 1D Block-layout
+  // START: 2D Grid-layout and 1D Block-layout
+  dim3 threadsPerBlock(1024, 1);
+  dim3 blocksPerGrid((NUM_ROW + 1023) / 1024, NUM_COL);
+  matrixAddition3<<<blocksPerGrid, threadsPerBlock>>>(devA, devB, devC,
+                                                      NUM_ROW * NUM_COL);
+  // END: 2D Grid-layout and 1D Block-layout
   // Wait for the kernel to end
   CUDA_CHECK(cudaDeviceSynchronize());
 
