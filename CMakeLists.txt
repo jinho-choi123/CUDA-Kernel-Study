@@ -29,5 +29,6 @@ set(CUDA_COMPUTE_COMPATIBILITY 86)
 # Find CUDA Toolkit
 find_package(CUDAToolkit REQUIRED)
 
+
 #### add subdirectory ####
 add_subdirectory(examples/)
