@@ -36,3 +36,8 @@ target_link_libraries(matrix_addition PRIVATE CUDA::cudart)
 set(07_GET_GPU_INFO "${CSRC_DIR}/07_get_gpu_info.cu")
 add_executable(get_gpu_info ${07_GET_GPU_INFO})
 target_link_libraries(get_gpu_info PRIVATE CUDA::cudart)
+
+# Build 08_matrix_addition_profiling
+set(08_MATRIX_ADDITION_PROFILING "${CSRC_DIR}/08_matrix_addition_profiling.cu")
+add_executable(matrix_addition_profiling ${08_MATRIX_ADDITION_PROFILING})
+target_link_libraries(matrix_addition_profiling PRIVATE CUDA::cudart)
