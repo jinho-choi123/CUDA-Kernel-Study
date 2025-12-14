@@ -46,3 +46,13 @@ target_link_libraries(matrix_addition_profiling PRIVATE CUDA::cudart)
 set(09_MATRIX_MULTIPLICATION_V0 "${CSRC_DIR}/09_matrix_multiplication_v0.cu")
 add_executable(matrix_multiplication_v0 ${09_MATRIX_MULTIPLICATION_V0})
 target_link_libraries(matrix_multiplication_v0 PRIVATE CUDA::cudart)
+
+# Build 10_matrix_multiplication_v1
+set(10_MATRIX_MULTIPLICATION_V1 "${CSRC_DIR}/10_matrix_multiplication_v1.cu")
+add_executable(matrix_multiplication_v1 ${10_MATRIX_MULTIPLICATION_V1})
+target_link_libraries(matrix_multiplication_v1 PRIVATE CUDA::cudart)
+
+# Build 11_matrix_multiplication_v2
+set(11_MATRIX_MULTIPLICATION_V2 "${CSRC_DIR}/11_matrix_multiplication_v2.cu")
+add_executable(matrix_multiplication_v2 ${11_MATRIX_MULTIPLICATION_V2})
+target_link_libraries(matrix_multiplication_v2 PRIVATE CUDA::cudart)
