@@ -56,3 +56,8 @@ target_link_libraries(matrix_multiplication_v1 PRIVATE CUDA::cudart)
 set(11_MATRIX_MULTIPLICATION_V2 "${CSRC_DIR}/11_matrix_multiplication_v2.cu")
 add_executable(matrix_multiplication_v2 ${11_MATRIX_MULTIPLICATION_V2})
 target_link_libraries(matrix_multiplication_v2 PRIVATE CUDA::cudart)
+
+#Build 12_GEMM
+set(12_GEMM "${CSRC_DIR}/12_GEMM.cu")
+add_executable(gemm ${12_GEMM})
+target_link_libraries(gemm PRIVATE CUDA::cudart)
