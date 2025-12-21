@@ -9,10 +9,10 @@
 #include "utils.cu"
 #include <stdio.h>
 
-#define M 4099
-#define K 4099
-#define N 4099
-#define ENABLE_VERIFICATION 0
+#define M 4096
+#define K 4096
+#define N 4096
+#define ENABLE_VERIFICATION 1
 
 #define SMEM_CACHE_ELEM_NUM_PER_BLOCK 16 * 16
 
@@ -27,7 +27,7 @@ __shared__ float smem_cache_B[SMEM_CACHE_ELEM_NUM_PER_BLOCK];
 __global__ void gemmV0(float *A, float *B, float *C, float alpha, float beta) {
     // Thread Layout
     // Block: (16, 16) threads
-    // Grid: (M + 15) / 16, (N + 15) / 16) blocks
+    // Grid: (N + 15) / 16, (M + 15) / 16) blocks
 
     int rowC = blockDim.y * blockIdx.y + threadIdx.y;
     int colC = blockDim.x * blockIdx.x + threadIdx.x;
@@ -36,22 +36,23 @@ __global__ void gemmV0(float *A, float *B, float *C, float alpha, float beta) {
     int rowBlock = threadIdx.y;
     int colBlock = threadIdx.x;
 
-    // zero the shared memory cache
-    smem_cache_A[rowBlock * 16 + colBlock] = 0.0f;
-    smem_cache_B[rowBlock * 16 + colBlock] = 0.0f;
-    __syncthreads();
 
-    if (rowC >= M || colC >= N) {
-        // index out of bound
-        return;
-    }
+    __syncthreads();
 
     float dotProduct = 0.0f;
 
-    for (int offset = 0; offset < K - (K % 16); offset += 16) {
+    for (int offset = 0; offset <= K; offset += 16) {
+        // zero the shared memory cache
+        smem_cache_A[rowBlock * 16 + colBlock] = 0.0f;
+        smem_cache_B[rowBlock * 16 + colBlock] = 0.0f;
+
         // Load the sub-matrix of A and B into shared memory
-        smem_cache_A[rowBlock * 16 + colBlock] = A[rowC * K + offset + colBlock];
-        smem_cache_B[rowBlock * 16 + colBlock] = B[(rowBlock + offset) * N + colC];
+        if (offset + colBlock < K && rowC < M) {
+            smem_cache_A[rowBlock * 16 + colBlock] = A[rowC * K + offset + colBlock];
+        }
+        if (offset + rowBlock < K && colC < N) {
+            smem_cache_B[rowBlock * 16 + colBlock] = B[(rowBlock + offset) * N + colC];
+        }
 
         // wait for all the threads in the block to load the sub-matrix of A and B into shared memory
         __syncthreads();
@@ -63,31 +64,12 @@ __global__ void gemmV0(float *A, float *B, float *C, float alpha, float beta) {
         __syncthreads();
     }
 
-    // Calculate the left-over elements when K is not a multiple of 16
-    if (K % 16 != 0) {
-        int offset = K - (K % 16);
 
-        if ((offset + colBlock >= K) || (offset + rowBlock >= K)) {
-            // index out of bound. store zero to shared memory
-            smem_cache_A[rowBlock * 16 + colBlock] = 0.0f;
-            smem_cache_B[rowBlock * 16 + colBlock] = 0.0f;
-        }
-        else {
-            smem_cache_A[rowBlock * 16 + colBlock] = A[rowC * K + offset + colBlock];
-            smem_cache_B[rowBlock * 16 + colBlock] = B[(rowBlock + offset) * N + colC];
-        }
-
-        __syncthreads();
-
-        // Perform the matmul sub-matrix of A(16 x 16) @ sub-matrix of B(16 x 16) = sub-matrix of C(16 x 16)
-        for (int i = 0; i < 16; i++) {
-            dotProduct += smem_cache_A[rowBlock * 16 + i] * smem_cache_B[i * 16 + colBlock];
-        }
-        __syncthreads();
-    }
     // store the result
     // NOTE: caching C into shared memory is not necessary for performance. So we directly use the global memory here.
-    C[rowC * N + colC] = dotProduct * alpha + beta * C[rowC * N + colC];
+    if (rowC < M && colC < N) {
+        C[rowC * N + colC] = dotProduct * alpha + beta * C[rowC * N + colC];
+    }
 }
 
 int main(void) {
@@ -108,12 +90,12 @@ int main(void) {
     goldenC = (float *)calloc(M * N, sizeof(float));
 
     for (int i = 0; i < M * K; i++) {
-         a[i] = (float)(rand() % 100);
-         // a[i] = 1.0f;
+        // a[i] = (float)(rand() % 100);
+        a[i] = 1.0f;
     }
     for (int i = 0; i < K * N; i++) {
-        b[i] = (float)(rand() % 100);
-        // b[i] = 1.0f;
+        // b[i] = (float)(rand() % 100);
+        b[i] = 1.0f;
     }
 
     // Calculate the golden value for c
@@ -149,7 +131,7 @@ int main(void) {
     // Launch Kernel
     printf("Launching kernel...\n");
     dim3 threadsPerBlock(16, 16);
-    dim3 blocksPerGrid((M + 15) / 16, (N + 15) / 16);
+    dim3 blocksPerGrid((N + 15) / 16, (M + 15) / 16);
     CUDA_CHECK(cudaEventRecord(start));
     gemmV0<<<blocksPerGrid, threadsPerBlock>>>(devA, devB, devC, 1.0f, 0.0f);
     CUDA_CHECK(cudaEventRecord(end));
