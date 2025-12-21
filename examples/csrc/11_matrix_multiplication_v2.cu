@@ -10,6 +10,7 @@
 #include "utils.cu"
 #include <stdio.h>
 
+// STRONG ASSUMPTION: M, K, N are all multiples of 32
 #define M 4096
 #define K 4096
 #define N 4096
